@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Display Antrian TV</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --bg: #040814;
+      --panel: #0a1128;
+      --border-black: #000000;
+      --border-glow: #1a2a4a;
+      --accent: #00d2ff;
+      --accent-green: #00e676;
+      --text-main: #ffffff;
+      --text-muted: #64748b;
+      --glow: 0 0 40px rgba(0, 210, 255, 0.25);
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+    }
+
+    /* CONTAINER UTAMA */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+      background: #040814;
+    }
+
+    /* HEADER */
+    #hdr {
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      background: #080f26;
+      border-bottom: 4px solid var(--border-black);
+      flex-shrink: 0;
+    }
+    .hdr-left { display: flex; flex-direction: column; gap: 2px; }
+    #org-name { font-family: 'Orbitron', sans-serif; font-size: 1.25rem; font-weight: 900; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; }
+    #org-sub  { font-size: 0.8rem; color: var(--text-muted); letter-spacing: 1.5px; font-weight: 600; }
+    .hdr-right { text-align: right; }
+    #clock { font-family: 'Orbitron', sans-serif; font-size: 2rem; font-weight: 700; color: var(--accent); line-height: 1; }
+    #datebox { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; font-weight: 600; }
+
+    /* BODY (LEFT + RIGHT) */
+    #main {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      flex: 1;
+      overflow: hidden;
+      background: #000000; /* Warna hitam di sela-sela border */
+    }
+
+    /* PANEL KIRI - ANTRIAN */
+    #left {
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      gap: 16px;
+      background: var(--bg);
+      border-right: 4px solid var(--border-black);
+      overflow: hidden;
+    }
+
+    /* CARD NOMOR DIPANGGIL */
+    .cur-card {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: radial-gradient(ellipse at 50% 10%, #0c2040 0%, #060d20 70%);
+      border: 2px solid var(--accent);
+      border-radius: 20px;
+      box-shadow: var(--glow);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .cur-label { font-size: 0.9rem; letter-spacing: 3px; color: var(--accent); font-weight: 700; margin-bottom: 8px; text-transform: uppercase; }
+    .cur-num {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(6rem, 14vw, 11rem);
+      font-weight: 900;
+      line-height: 1;
+      color: #ffffff;
+      text-shadow: 0 0 40px var(--accent);
+      letter-spacing: 6px;
+    }
+    .cur-loket {
+      margin-top: 16px;
+      padding: 8px 30px;
+      background: rgba(0, 210, 255, 0.15);
+      border: 1.5px solid var(--accent);
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 2px;
+    }
+    
+    @keyframes flashAnim { 0%,100%{opacity:1} 25%,75%{opacity:.2} 50%{opacity:1} }
+    .flash { animation: flashAnim 0.5s ease 3; }
+
+    /* BARIS NOMOR SELANJUTNYA */
+    .next-row { display: flex; gap: 12px; }
+    .nc {
+      flex: 1;
+      background: var(--panel);
+      border: 2px solid #000000;
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .nc-lbl { font-size: 0.7rem; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
+    .nc-num { font-family: 'Orbitron', sans-serif; font-size: 1.8rem; font-weight: 700; color: #ffffff; }
+
+    /* PANEL KANAN - YOUTUBE VIDEO */
+    #right {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      overflow: hidden;
+    }
+    .yt-hdr {
+      padding: 10px 16px;
+      background: var(--panel);
+      border-bottom: 4px solid var(--border-black);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      font-weight: 700;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .yt-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff4757; box-shadow: 0 0 8px #ff4757; }
+    
+    #yt-wrap {
+      flex: 1;
+      position: relative;
+      background: #000000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #yt-player {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    #yt-msg {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 20px;
+      background: #040814;
+    }
+
+    /* TICKER RUNNING TEXT */
+    #ticker {
+      height: 48px;
+      flex-shrink: 0;
+      background: #060b1e;
+      border-top: 4px solid var(--border-black);
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+    }
+    .t-badge {
+      flex-shrink: 0;
+      height: 100%;
+      padding: 0 24px;
+      background: var(--accent);
+      color: #040814;
+      font-weight: 900;
+      font-size: 0.85rem;
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+    }
+    .t-track { flex: 1; overflow: hidden; position: relative; height: 100%; }
+    #ticker-text {
+      display: inline-flex;
+      align-items: center;
+      height: 100%;
+      white-space: nowrap;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-main);
+      animation: scroll 30s linear infinite;
+      padding-left: 100%;
+    }
+    @keyframes scroll { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+    /* FIREBASE STATUS DOT */
+    #fb-dot {
+      position: fixed; bottom: 10px; right: 12px;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--text-muted);
+      transition: background 0.4s;
+      z-index: 99;
+    }
+    #fb-dot.on  { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+    #fb-dot.err { background: #ff4757; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <!-- HEADER -->
+  <div id="hdr">
+    <div class="hdr-left">
+      <div id="org-name">SISTEM ANTRIAN</div>
+      <div id="org-sub">PELAYANAN TERPADU</div>
+    </div>
+    <div class="hdr-right">
+      <div id="clock">00:00:00</div>
+      <div id="datebox">---</div>
+    </div>
+  </div>
+
+  <!-- MAIN AREA -->
+  <div id="main">
+    <!-- PANEL KIRI (ANTRIAN) -->
+    <div id="left">
+      <div class="cur-card" id="cur-card">
+        <div class="cur-label">NOMOR YANG DIPANGGIL</div>
+        <div class="cur-num" id="cur-num">---</div>
+        <div class="cur-loket" id="cur-loket" style="display:none">LOKET -</div>
+      </div>
+      
+      <div class="next-row">
+        <div class="nc"><div class="nc-lbl">Berikutnya</div><div class="nc-num" id="nxt1">—</div></div>
+        <div class="nc"><div class="nc-lbl">Selanjutnya</div><div class="nc-num" id="nxt2">—</div></div>
+        <div class="nc"><div class="nc-lbl">Sisa Antrian</div><div class="nc-num" id="waiting">0</div></div>
+      </div>
+    </div>
+
+    <!-- PANEL KANAN (YOUTUBE) -->
+    <div id="right">
+      <div class="yt-hdr"><div class="yt-dot"></div>SIARAN INFORMASI / VIDEO</div>
+      <div id="yt-wrap">
+        <div id="yt-msg">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8,21 12,17 16,21"/><line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          <span>Atur YouTube ID dari Controller</span>
+        </div>
+        <div id="yt-player"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TICKER -->
+  <div id="ticker">
+    <div class="t-badge">INFO</div>
+    <div class="t-track">
+      <span id="ticker-text">Selamat Datang di Layanan Antrian Digital &nbsp;•&nbsp; Harap Menunggu Nomor Antrian Anda Dipanggil &nbsp;•&nbsp; Terima Kasih</span>
+    </div>
+  </div>
+</div>
+
+<div id="fb-dot" title="Firebase Status"></div>
+
+<!-- YouTube IFrame Player API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script type="module">
+import { initializeApp }                    from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getDatabase, ref, onValue }        from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { firebaseConfig }                   from './firebase-config.js';
+
+// ── FIREBASE ──────────────────────────────
+let db;
+const dot = document.getElementById('fb-dot');
+
+try {
+  const app = initializeApp(firebaseConfig);
+  db = getDatabase(app);
+} catch (e) {
+  console.error("Firebase init error:", e);
+  dot.className = 'err';
+}
+
+// ── CLOCK ─────────────────────────────────
+const DAYS   = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+function tick() {
+  const n = new Date();
+  document.getElementById('clock').textContent =
+    String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')+':'+String(n.getSeconds()).padStart(2,'0');
+  document.getElementById('datebox').textContent =
+    DAYS[n.getDay()]+', '+n.getDate()+' '+MONTHS[n.getMonth()]+' '+n.getFullYear();
+}
+setInterval(tick, 1000); tick();
+
+// ── YOUTUBE API LOADER ────────────────────
+let ytPlayer = null;
+let currentYtId = '';
+let isYtReady = false;
+
+window.onYouTubeIframeAPIReady = function() {
+  isYtReady = true;
+  if (pendingYtId) {
+    loadYtVideo(pendingYtId);
+  }
+};
+
+let pendingYtId = '';
+
+function setYouTube(id) {
+  if (!id) {
+    document.getElementById('yt-msg').style.display = 'flex';
+    if (ytPlayer && typeof ytPlayer.destroy === 'function') {
+      ytPlayer.destroy();
+      ytPlayer = null;
+    }
+    currentYtId = '';
+    return;
+  }
+
+  if (id === currentYtId) return;
+  currentYtId = id;
+
+  if (!isYtReady) {
+    pendingYtId = id;
+    return;
+  }
+
+  loadYtVideo(id);
+}
+
+function loadYtVideo(id) {
+  document.getElementById('yt-msg').style.display = 'none';
+  
+  if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
+    if (id.length > 15 || id.startsWith('PL')) {
+      ytPlayer.loadPlaylist({ list: id, listType: 'playlist' });
+    } else {
+      ytPlayer.loadVideoById(id);
+    }
+  } else {
+    const playerConfig = {
+      height: '100%',
+      width: '100%',
+      playerVars: {
+        'autoplay': 1,
+        'controls': 1,
+        'mute': 1,
+        'loop': 1,
+        'rel': 0,
+        'modestbranding': 1,
+        'playsinline': 1
+      },
+      events: {
+        'onReady': (event) => {
+          event.target.playVideo();
+        },
+        'onStateChange': (event) => {
+          // Loop video if ended
+          if (event.data === YT.PlayerState.ENDED) {
+            event.target.playVideo();
+          }
+        }
+      }
+    };
+
+    if (id.length > 15 || id.startsWith('PL')) {
+      playerConfig.playerVars.listType = 'playlist';
+      playerConfig.playerVars.list = id;
+    } else {
+      playerConfig.videoId = id;
+      playerConfig.playerVars.playlist = id; // Required for loop to work
+    }
+
+    ytPlayer = new YT.Player('yt-player', playerConfig);
+  }
+}
+
+// ── STATE LISTENER ────────────────────────
+let lastCallTs = 0;
+
+if (db) {
+  onValue(ref(db, 'state'), snap => {
+    dot.className = 'on';
+    if (!snap.exists()) return;
+    renderQueue(snap.val());
+  }, err => { dot.className = 'err'; console.error(err); });
+
+  onValue(ref(db, 'callTrigger'), snap => {
+    if (!snap.exists()) return;
+    const t = snap.val();
+    if (t.ts && t.ts !== lastCallTs) {
+      lastCallTs = t.ts;
+      fireCall(t.number, t.loket, t.prefix, t.voice);
+    }
+  });
+
+  onValue(ref(db, 'display'), snap => {
+    if (!snap.exists()) return;
+    const d = snap.val();
+    if (d.orgName) document.getElementById('org-name').textContent = d.orgName;
+    if (d.orgSub)  document.getElementById('org-sub').textContent  = d.orgSub;
+    if (d.ticker)  setTicker(d.ticker);
+    setYouTube(d.youtube || '');
+  });
+}
+
+// ── RENDER QUEUE ──────────────────────────
+function renderQueue(s) {
+  const cur     = s.current ?? null;
+  const queue   = Array.isArray(s.queue)  ? s.queue  : [];
+  const called  = Array.isArray(s.called) ? s.called : [];
+  const loket   = s.loket || '';
+  const prefix  = s.prefix || '';
+  const pending = queue.filter(n => !called.includes(n));
+
+  // Current
+  const curStr = cur !== null ? (prefix + String(cur).padStart(3,'0')) : '---';
+  document.getElementById('cur-num').textContent = curStr;
+
+  // Loket
+  const lb = document.getElementById('cur-loket');
+  if (loket) { lb.textContent = 'LOKET ' + loket; lb.style.display = ''; }
+  else { lb.style.display = 'none'; }
+
+  // Next
+  document.getElementById('nxt1').textContent    = pending[0] !== undefined ? (prefix + String(pending[0]).padStart(3,'0')) : '—';
+  document.getElementById('nxt2').textContent    = pending[1] !== undefined ? (prefix + String(pending[1]).padStart(3,'0')) : '—';
+  document.getElementById('waiting').textContent = Math.max(0, pending.length);
+}
+
+// ── FIRE CALL (FLASH + TTS) ───────────────
+function fireCall(number, loket, prefix, voice = {}) {
+  const el = document.getElementById('cur-num');
+  el.classList.remove('flash');
+  void el.offsetWidth;
+  el.classList.add('flash');
+
+  if (voice.enabled !== false && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+    const pfx      = prefix ? prefix + ' ' : '';
+    const digits   = String(number).split('').join(' ');
+    const loketTxt = loket ? `, silakan menuju loket ${loket}` : '';
+    const msg      = `${pfx}Nomor antrian ${digits}${loketTxt}. ${pfx}Nomor antrian ${digits}${loketTxt}.`;
+    
+    const u = new SpeechSynthesisUtterance(msg);
+    u.lang   = 'id-ID';
+    u.rate   = voice.rate   ?? 0.85;
+    u.pitch  = voice.pitch  ?? 1.0;
+    u.volume = voice.volume ?? 1.0;
+
+    const voices = speechSynthesis.getVoices();
+    const v = voices.find(v => v.lang.startsWith('id') || v.lang.startsWith('ms'));
+    if (v) u.voice = v;
+    
+    setTimeout(() => speechSynthesis.speak(u), 300);
+  }
+}
+
+// ── TICKER ────────────────────────────────
+function setTicker(msg) {
+  if (!msg) return;
+  const doubled = msg + ' &nbsp;•&nbsp; ' + msg;
+  document.getElementById('ticker-text').innerHTML = doubled;
+}
+
+// Init Speech Voices
+if ('speechSynthesis' in window) {
+  speechSynthesis.getVoices();
+  speechSynthesis.addEventListener('voiceschanged', () => speechSynthesis.getVoices());
+}
+</script>
+</body>
+</html>
