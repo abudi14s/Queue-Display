@@ -249,28 +249,9 @@ import { firebaseConfig }                   from './firebase-config.js';
 let db;
 const dot = document.getElementById('fb-dot');
 
-function getDbUrl() {
-  // Ambil dari URL parameter ?db=... jika ada, atau localStorage, atau config file
-  const urlParams = new URLSearchParams(window.location.search);
-  const dbParam = urlParams.get('db');
-  if (dbParam) {
-    localStorage.setItem('ANTRIAN_DB_URL', dbParam);
-    return dbParam;
-  }
-  return localStorage.getItem('ANTRIAN_DB_URL') || (firebaseConfig.databaseURL.includes("GANTI") ? "" : firebaseConfig.databaseURL);
-}
-
 function initFirebase() {
-  const dbUrl = getDbUrl();
-  if (!dbUrl) {
-    console.warn("Database URL belum diset!");
-    dot.className = 'err';
-    return false;
-  }
-  
   try {
-    const cfg = { ...firebaseConfig, databaseURL: dbUrl };
-    const app = initializeApp(cfg);
+    const app = initializeApp(firebaseConfig);
     db = getDatabase(app);
     startListeners();
     return true;

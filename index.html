@@ -137,7 +137,7 @@
     }
     .form-group:last-child { margin-bottom: 0; }
     label { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
-    input[type="text"], input[type="number"], textarea, select {
+    input[type="text"], input[type="number"], select {
       width: 100%;
       background: #040814;
       border: 1px solid var(--card-border);
@@ -148,7 +148,7 @@
       font-family: inherit;
       outline: none;
     }
-    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+    input:focus, select:focus { border-color: var(--accent); }
 
     .help-text {
       font-size: 0.75rem;
@@ -172,28 +172,15 @@
   <div class="brand">KONTROLER ANTRIAN</div>
   <div class="status-badge">
     <div class="dot" id="status-dot"></div>
-    <span id="status-text">Memuat...</span>
+    <span id="status-text">Menghubungkan...</span>
   </div>
 </header>
 
 <div class="container">
 
-  <!-- CARD 1: SETTING FIREBASE CONFIG (LANGSUNG TERSEDIA DI HALAMAN) -->
-  <div class="card" style="border: 2px solid var(--accent);">
-    <div class="card-title" style="color: var(--accent);">1. Pengaturan Database Firebase</div>
-    <div class="form-group">
-      <label>Firebase Database URL (Wajib)</label>
-      <input type="text" id="cfg-dburl" placeholder="https://nama-project-default-rtdb.firebaseio.com">
-      <div class="help-text">Masukkan URL Realtime Database dari Firebase Console Anda.</div>
-    </div>
-    <button class="btn-primary" id="btn-save-fb-config" style="width: 100%; margin-top: 8px;">
-      Simpan & Hubungkan Database
-    </button>
-  </div>
-  
-  <!-- CARD 2: KONTROL PANGGILAN -->
+  <!-- CARD 1: KONTROL PANGGILAN -->
   <div class="card">
-    <div class="card-title">2. Panggil Nomor Antrian</div>
+    <div class="card-title">Nomor Terpanggil Saat Ini</div>
     <div class="display-num-box">
       <div class="display-num" id="cur-display">---</div>
       <div class="display-loket" id="loket-display">LOKET 1</div>
@@ -215,9 +202,9 @@
     </div>
   </div>
 
-  <!-- CARD 3: SETUP MANUAL -->
+  <!-- CARD 2: SETUP MANUAL -->
   <div class="card">
-    <div class="card-title">3. Pengaturan Loket & Manual</div>
+    <div class="card-title">Pengaturan Loket & Manual</div>
     <div class="form-group">
       <label>Loket Aktif</label>
       <input type="text" id="input-loket" value="1" placeholder="Contoh: 1 / A / CS">
@@ -236,9 +223,9 @@
     </div>
   </div>
 
-  <!-- CARD 4: CUSTOMIZE TV -->
+  <!-- CARD 3: CUSTOMIZE TV -->
   <div class="card">
-    <div class="card-title">4. Kostumisasi Tampilan TV</div>
+    <div class="card-title">Kostumisasi Tampilan TV</div>
     
     <div class="form-group">
       <label>Nama Instansi / Perusahaan</label>
@@ -273,45 +260,19 @@ import { initializeApp }                    from 'https://www.gstatic.com/fireba
 import { getDatabase, ref, onValue, set }   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { firebaseConfig }                   from './firebase-config.js';
 
-let db = null;
+let db;
 const statusDot  = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
 
-// Ambil simpanan DB URL
-const savedUrl = localStorage.getItem('ANTRIAN_DB_URL') || "";
-document.getElementById('cfg-dburl').value = savedUrl;
-
-function connectFirebase(dbUrl) {
-  if (!dbUrl) {
-    statusDot.className = 'dot';
-    statusText.textContent = 'Isi Firebase URL';
-    return;
-  }
-
-  try {
-    const cfg = { ...firebaseConfig, databaseURL: dbUrl };
-    const app = initializeApp(cfg);
-    db = getDatabase(app);
-    statusDot.className = 'dot on';
-    statusText.textContent = 'Terhubung';
-    startListeners();
-  } catch (e) {
-    console.error(e);
-    statusDot.className = 'dot';
-    statusText.textContent = 'URL Salah';
-  }
+try {
+  const app = initializeApp(firebaseConfig);
+  db = getDatabase(app);
+  startListeners();
+} catch (e) {
+  console.error("Firebase Connect Error:", e);
+  statusDot.className = 'dot';
+  statusText.textContent = 'Config Error';
 }
-
-document.getElementById('btn-save-fb-config').addEventListener('click', () => {
-  const url = document.getElementById('cfg-dburl').value.trim();
-  if (url) {
-    localStorage.setItem('ANTRIAN_DB_URL', url);
-    alert('Konfigurasi Firebase disimpan!');
-    connectFirebase(url);
-  } else {
-    alert('Harap isi Firebase Database URL!');
-  }
-});
 
 let currentState = { current: null, queue: [], called: [], loket: '1', prefix: '' };
 
@@ -354,7 +315,7 @@ function startListeners() {
 }
 
 document.getElementById('btn-next').addEventListener('click', async () => {
-  if (!db) { alert('Harap isi dan simpan Firebase Database URL terlebih dahulu di atas!'); return; }
+  if (!db) return;
   const loket  = document.getElementById('input-loket').value || '1';
   const prefix = document.getElementById('input-prefix').value || '';
   
@@ -442,7 +403,7 @@ document.getElementById('btn-call-direct').addEventListener('click', async () =>
     called: called,
     loket: loket,
     prefix: prefix
-  });
+  };
 
   triggerCall(num, loket, prefix);
 });
@@ -476,8 +437,6 @@ document.getElementById('btn-save-display').addEventListener('click', async () =
   await set(ref(db, 'display'), displayConfig);
   alert('Pengaturan tampilan TV berhasil diperbarui!');
 });
-
-if (savedUrl) connectFirebase(savedUrl);
 </script>
 
 </body>
