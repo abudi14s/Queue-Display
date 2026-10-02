@@ -45,7 +45,6 @@
       display: inline-flex; align-items: center; gap: 6px;
       padding: 4px 10px; border-radius: 20px;
       font-size: 0.75rem; font-weight: 600; background: rgba(255,255,255,0.05);
-      cursor: pointer;
     }
     .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
     .dot.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
@@ -138,7 +137,7 @@
     }
     .form-group:last-child { margin-bottom: 0; }
     label { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
-    input[type="text"], input[type="number"], select {
+    input[type="text"], input[type="number"], textarea, select {
       width: 100%;
       background: #040814;
       border: 1px solid var(--card-border);
@@ -149,7 +148,7 @@
       font-family: inherit;
       outline: none;
     }
-    input:focus, select:focus { border-color: var(--accent); }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
 
     .help-text {
       font-size: 0.75rem;
@@ -165,42 +164,36 @@
       border-radius: 6px;
       font-size: 0.7rem;
     }
-
-    #config-modal {
-      position: fixed; inset: 0; background: rgba(4,8,20,0.98); z-index: 10000;
-      display: flex; align-items: center; justify-content: center; padding: 20px;
-    }
-    .modal-box {
-      background: #0f172a; border: 2px solid var(--accent); border-radius: 16px;
-      padding: 24px; max-width: 480px; width: 100%; color: #fff; text-align: center;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-    }
-    .modal-box h2 { color: var(--accent); margin-bottom: 12px; font-family: 'Orbitron', sans-serif; font-size: 1.2rem; }
-    .modal-box p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
-    .modal-box input {
-      width: 100%; background: #040814; border: 1px solid #1e293b; border-radius: 8px;
-      padding: 12px; color: #fff; font-size: 0.9rem; margin-bottom: 14px; outline: none;
-    }
-    .modal-box button {
-      width: 100%; background: var(--accent); color: #040814; font-weight: 800;
-      padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;
-    }
   </style>
 </head>
 <body>
 
 <header>
   <div class="brand">KONTROLER ANTRIAN</div>
-  <div class="status-badge" id="btn-open-config">
+  <div class="status-badge">
     <div class="dot" id="status-dot"></div>
-    <span id="status-text">Set Database</span>
+    <span id="status-text">Memuat...</span>
   </div>
 </header>
 
 <div class="container">
+
+  <!-- CARD 1: SETTING FIREBASE CONFIG (LANGSUNG TERSEDIA DI HALAMAN) -->
+  <div class="card" style="border: 2px solid var(--accent);">
+    <div class="card-title" style="color: var(--accent);">1. Pengaturan Database Firebase</div>
+    <div class="form-group">
+      <label>Firebase Database URL (Wajib)</label>
+      <input type="text" id="cfg-dburl" placeholder="https://nama-project-default-rtdb.firebaseio.com">
+      <div class="help-text">Masukkan URL Realtime Database dari Firebase Console Anda.</div>
+    </div>
+    <button class="btn-primary" id="btn-save-fb-config" style="width: 100%; margin-top: 8px;">
+      Simpan & Hubungkan Database
+    </button>
+  </div>
   
+  <!-- CARD 2: KONTROL PANGGILAN -->
   <div class="card">
-    <div class="card-title">Nomor Terpanggil Saat Ini</div>
+    <div class="card-title">2. Panggil Nomor Antrian</div>
     <div class="display-num-box">
       <div class="display-num" id="cur-display">---</div>
       <div class="display-loket" id="loket-display">LOKET 1</div>
@@ -222,8 +215,9 @@
     </div>
   </div>
 
+  <!-- CARD 3: SETUP MANUAL -->
   <div class="card">
-    <div class="card-title">Panggil & Tambah Manual</div>
+    <div class="card-title">3. Pengaturan Loket & Manual</div>
     <div class="form-group">
       <label>Loket Aktif</label>
       <input type="text" id="input-loket" value="1" placeholder="Contoh: 1 / A / CS">
@@ -234,7 +228,7 @@
     </div>
     <div class="btn-grid" style="margin-top: 8px;">
       <button class="btn-primary" id="btn-add-queue">
-        + Tambah Nomor Antrian
+        + Tambah Antrian
       </button>
       <button class="btn-outline" id="btn-call-direct">
         Panggil Langsung...
@@ -242,8 +236,9 @@
     </div>
   </div>
 
+  <!-- CARD 4: CUSTOMIZE TV -->
   <div class="card">
-    <div class="card-title">Kostumisasi Tampilan TV</div>
+    <div class="card-title">4. Kostumisasi Tampilan TV</div>
     
     <div class="form-group">
       <label>Nama Instansi / Perusahaan</label>
@@ -258,7 +253,7 @@
     <div class="form-group">
       <label>YouTube Video / Playlist ID <span class="badge-tag">No-Error 153</span></label>
       <input type="text" id="input-youtube" placeholder="Contoh: dQw4w9WgXcQ atau PLxxx">
-      <div class="help-text">Masukkan <b>Video ID</b> (karakter setelah `v=`) atau <b>Playlist ID</b> (diawali `PL...`). TV akan memutar otomatis tanpa iklan.</div>
+      <div class="help-text">Masukkan <b>Video ID</b> (karakter setelah `v=`) atau <b>Playlist ID</b> (diawali `PL...`).</div>
     </div>
 
     <div class="form-group">
@@ -273,69 +268,49 @@
 
 </div>
 
-<div id="config-modal" style="display: flex;">
-  <div class="modal-box">
-    <h2>Set Firebase Database</h2>
-    <p>Masukkan <b>Database URL</b> dari Firebase Console Anda agar HP dan TV terhubung:</p>
-    <input type="text" id="db-url-input" placeholder="https://nama-project-default-rtdb.firebaseio.com">
-    <button id="btn-save-config">Simpan & Hubungkan</button>
-  </div>
-</div>
-
 <script type="module">
 import { initializeApp }                    from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getDatabase, ref, onValue, set }   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { firebaseConfig }                   from './firebase-config.js';
 
-let db;
+let db = null;
 const statusDot  = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
 
-function getDbUrl() {
-  return localStorage.getItem('ANTRIAN_DB_URL') || (firebaseConfig.databaseURL.includes("GANTI") ? "" : firebaseConfig.databaseURL);
-}
+// Ambil simpanan DB URL
+const savedUrl = localStorage.getItem('ANTRIAN_DB_URL') || "";
+document.getElementById('cfg-dburl').value = savedUrl;
 
-function initFirebase() {
-  const dbUrl = getDbUrl();
+function connectFirebase(dbUrl) {
   if (!dbUrl) {
-    document.getElementById('config-modal').style.display = 'flex';
-    statusText.textContent = 'Set Database';
-    return false;
+    statusDot.className = 'dot';
+    statusText.textContent = 'Isi Firebase URL';
+    return;
   }
-  
+
   try {
     const cfg = { ...firebaseConfig, databaseURL: dbUrl };
     const app = initializeApp(cfg);
     db = getDatabase(app);
-    document.getElementById('config-modal').style.display = 'none';
+    statusDot.className = 'dot on';
+    statusText.textContent = 'Terhubung';
     startListeners();
-    return true;
   } catch (e) {
-    console.error("Firebase init error:", e);
-    statusText.textContent = 'Err Database';
-    document.getElementById('config-modal').style.display = 'flex';
-    return false;
+    console.error(e);
+    statusDot.className = 'dot';
+    statusText.textContent = 'URL Salah';
   }
 }
 
-document.getElementById('btn-save-config').addEventListener('click', () => {
-  const url = document.getElementById('db-url-input').value.trim();
+document.getElementById('btn-save-fb-config').addEventListener('click', () => {
+  const url = document.getElementById('cfg-dburl').value.trim();
   if (url) {
     localStorage.setItem('ANTRIAN_DB_URL', url);
-    location.reload();
+    alert('Konfigurasi Firebase disimpan!');
+    connectFirebase(url);
   } else {
-    alert("Harap masukkan URL Database!");
+    alert('Harap isi Firebase Database URL!');
   }
-});
-
-const existingUrl = getDbUrl();
-if (existingUrl) {
-  document.getElementById('db-url-input').value = existingUrl;
-}
-
-document.getElementById('btn-open-config').addEventListener('click', () => {
-  document.getElementById('db-url-input').value = getDbUrl();
-  document.getElementById('config-modal').style.display = 'flex';
 });
 
 let currentState = { current: null, queue: [], called: [], loket: '1', prefix: '' };
@@ -379,7 +354,7 @@ function startListeners() {
 }
 
 document.getElementById('btn-next').addEventListener('click', async () => {
-  if (!db) return;
+  if (!db) { alert('Harap isi dan simpan Firebase Database URL terlebih dahulu di atas!'); return; }
   const loket  = document.getElementById('input-loket').value || '1';
   const prefix = document.getElementById('input-prefix').value || '';
   
@@ -502,7 +477,7 @@ document.getElementById('btn-save-display').addEventListener('click', async () =
   alert('Pengaturan tampilan TV berhasil diperbarui!');
 });
 
-initFirebase();
+if (savedUrl) connectFirebase(savedUrl);
 </script>
 
 </body>
