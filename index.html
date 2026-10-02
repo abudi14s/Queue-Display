@@ -29,7 +29,6 @@
       padding-bottom: 40px;
     }
 
-    /* HEADER */
     header {
       background: #0f172a;
       border-bottom: 2px solid #000;
@@ -46,11 +45,11 @@
       display: inline-flex; align-items: center; gap: 6px;
       padding: 4px 10px; border-radius: 20px;
       font-size: 0.75rem; font-weight: 600; background: rgba(255,255,255,0.05);
+      cursor: pointer;
     }
     .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
     .dot.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
 
-    /* LAYOUT CONTAINER */
     .container {
       max-width: 600px;
       margin: 0 auto;
@@ -60,7 +59,6 @@
       gap: 16px;
     }
 
-    /* CARDS */
     .card {
       background: var(--card);
       border: 2px solid #000;
@@ -80,7 +78,6 @@
       justify-content: space-between;
     }
 
-    /* DISPLAY CURRENT NUMBER */
     .display-num-box {
       text-align: center;
       padding: 14px;
@@ -103,7 +100,6 @@
       margin-top: 4px;
     }
 
-    /* MAIN ACTION BUTTONS */
     .btn-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -134,7 +130,6 @@
     .btn-red { background: var(--red); color: #fff; }
     .btn-outline { background: transparent; border: 1px solid var(--card-border); color: var(--text); }
 
-    /* FORM INPUTS */
     .form-group {
       display: flex;
       flex-direction: column;
@@ -156,7 +151,6 @@
     }
     input:focus, select:focus { border-color: var(--accent); }
 
-    /* HELPERS & GUIDES */
     .help-text {
       font-size: 0.75rem;
       color: var(--muted);
@@ -171,21 +165,40 @@
       border-radius: 6px;
       font-size: 0.7rem;
     }
+
+    #config-modal {
+      position: fixed; inset: 0; background: rgba(4,8,20,0.98); z-index: 10000;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-box {
+      background: #0f172a; border: 2px solid var(--accent); border-radius: 16px;
+      padding: 24px; max-width: 480px; width: 100%; color: #fff; text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+    .modal-box h2 { color: var(--accent); margin-bottom: 12px; font-family: 'Orbitron', sans-serif; font-size: 1.2rem; }
+    .modal-box p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+    .modal-box input {
+      width: 100%; background: #040814; border: 1px solid #1e293b; border-radius: 8px;
+      padding: 12px; color: #fff; font-size: 0.9rem; margin-bottom: 14px; outline: none;
+    }
+    .modal-box button {
+      width: 100%; background: var(--accent); color: #040814; font-weight: 800;
+      padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;
+    }
   </style>
 </head>
 <body>
 
 <header>
   <div class="brand">KONTROLER ANTRIAN</div>
-  <div class="status-badge">
+  <div class="status-badge" id="btn-open-config">
     <div class="dot" id="status-dot"></div>
-    <span id="status-text">Hubungkan...</span>
+    <span id="status-text">Set Database</span>
   </div>
 </header>
 
 <div class="container">
   
-  <!-- DISPLAY STATUS SEKARANG -->
   <div class="card">
     <div class="card-title">Nomor Terpanggil Saat Ini</div>
     <div class="display-num-box">
@@ -209,7 +222,6 @@
     </div>
   </div>
 
-  <!-- PENGATURAN LOKET & ANTREAN MANUAL -->
   <div class="card">
     <div class="card-title">Panggil & Tambah Manual</div>
     <div class="form-group">
@@ -230,7 +242,6 @@
     </div>
   </div>
 
-  <!-- PENGATURAN TAMPILAN TV (YOUTUBE & HEADER) -->
   <div class="card">
     <div class="card-title">Kostumisasi Tampilan TV</div>
     
@@ -262,27 +273,75 @@
 
 </div>
 
+<div id="config-modal" style="display: flex;">
+  <div class="modal-box">
+    <h2>Set Firebase Database</h2>
+    <p>Masukkan <b>Database URL</b> dari Firebase Console Anda agar HP dan TV terhubung:</p>
+    <input type="text" id="db-url-input" placeholder="https://nama-project-default-rtdb.firebaseio.com">
+    <button id="btn-save-config">Simpan & Hubungkan</button>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp }                    from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getDatabase, ref, onValue, set, get } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { getDatabase, ref, onValue, set }   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { firebaseConfig }                   from './firebase-config.js';
 
 let db;
 const statusDot  = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
 
-try {
-  const app = initializeApp(firebaseConfig);
-  db = getDatabase(app);
-} catch (e) {
-  statusText.textContent = 'Config Error';
-  console.error(e);
+function getDbUrl() {
+  return localStorage.getItem('ANTRIAN_DB_URL') || (firebaseConfig.databaseURL.includes("GANTI") ? "" : firebaseConfig.databaseURL);
 }
 
-// ── STATE LISTENER ────────────────────────
+function initFirebase() {
+  const dbUrl = getDbUrl();
+  if (!dbUrl) {
+    document.getElementById('config-modal').style.display = 'flex';
+    statusText.textContent = 'Set Database';
+    return false;
+  }
+  
+  try {
+    const cfg = { ...firebaseConfig, databaseURL: dbUrl };
+    const app = initializeApp(cfg);
+    db = getDatabase(app);
+    document.getElementById('config-modal').style.display = 'none';
+    startListeners();
+    return true;
+  } catch (e) {
+    console.error("Firebase init error:", e);
+    statusText.textContent = 'Err Database';
+    document.getElementById('config-modal').style.display = 'flex';
+    return false;
+  }
+}
+
+document.getElementById('btn-save-config').addEventListener('click', () => {
+  const url = document.getElementById('db-url-input').value.trim();
+  if (url) {
+    localStorage.setItem('ANTRIAN_DB_URL', url);
+    location.reload();
+  } else {
+    alert("Harap masukkan URL Database!");
+  }
+});
+
+const existingUrl = getDbUrl();
+if (existingUrl) {
+  document.getElementById('db-url-input').value = existingUrl;
+}
+
+document.getElementById('btn-open-config').addEventListener('click', () => {
+  document.getElementById('db-url-input').value = getDbUrl();
+  document.getElementById('config-modal').style.display = 'flex';
+});
+
 let currentState = { current: null, queue: [], called: [], loket: '1', prefix: '' };
 
-if (db) {
+function startListeners() {
+  if (!db) return;
   onValue(ref(db, 'state'), snap => {
     statusDot.className = 'dot on';
     statusText.textContent = 'Terhubung';
@@ -319,7 +378,6 @@ if (db) {
   });
 }
 
-// ── ACTION: NEXT ──────────────────────────
 document.getElementById('btn-next').addEventListener('click', async () => {
   if (!db) return;
   const loket  = document.getElementById('input-loket').value || '1';
@@ -328,7 +386,6 @@ document.getElementById('btn-next').addEventListener('click', async () => {
   let queue  = [...(currentState.queue || [])];
   let called = [...(currentState.called || [])];
   
-  // Jika antrian kosong, buat antrian baru otomatis
   let pending = queue.filter(n => !called.includes(n));
   if (pending.length === 0) {
     const nextNum = queue.length > 0 ? Math.max(...queue) + 1 : 1;
@@ -352,7 +409,6 @@ document.getElementById('btn-next').addEventListener('click', async () => {
   triggerCall(nextNum, loket, prefix);
 });
 
-// ── ACTION: RECALL ────────────────────────
 document.getElementById('btn-recall').addEventListener('click', async () => {
   if (!db || currentState.current === null) return;
   const loket  = document.getElementById('input-loket').value || '1';
@@ -360,7 +416,6 @@ document.getElementById('btn-recall').addEventListener('click', async () => {
   triggerCall(currentState.current, loket, prefix);
 });
 
-// ── ACTION: RESET ─────────────────────────
 document.getElementById('btn-reset').addEventListener('click', async () => {
   if (!db) return;
   if (confirm('Apakah Anda yakin ingin mereset antrian dari 0?')) {
@@ -376,7 +431,6 @@ document.getElementById('btn-reset').addEventListener('click', async () => {
   }
 });
 
-// ── ACTION: TAMBAH NOMOR MANUAL ───────────
 document.getElementById('btn-add-queue').addEventListener('click', async () => {
   if (!db) return;
   let queue = [...(currentState.queue || [])];
@@ -390,7 +444,6 @@ document.getElementById('btn-add-queue').addEventListener('click', async () => {
   alert('Nomor antrian #' + nextNum + ' telah ditambahkan!');
 });
 
-// ── ACTION: PANGGIL DIRECT ────────────────
 document.getElementById('btn-call-direct').addEventListener('click', async () => {
   if (!db) return;
   const numStr = prompt('Masukkan nomor antrian yang ingin dipanggil langsung (contoh: 5):');
@@ -419,7 +472,6 @@ document.getElementById('btn-call-direct').addEventListener('click', async () =>
   triggerCall(num, loket, prefix);
 });
 
-// ── TRIGGER SOUND & FLASH ─────────────────
 function triggerCall(num, loket, prefix) {
   set(ref(db, 'callTrigger'), {
     number: num,
@@ -429,12 +481,10 @@ function triggerCall(num, loket, prefix) {
   });
 }
 
-// ── ACTION: SIMPAN DISPLAY SETTINGS ───────
 document.getElementById('btn-save-display').addEventListener('click', async () => {
   if (!db) return;
   
   let ytInput = document.getElementById('input-youtube').value.trim();
-  // Ekstrak ID jika user memasukkan link URL lengkap
   if (ytInput.includes('v=')) {
     ytInput = ytInput.split('v=')[1].split('&')[0];
   } else if (ytInput.includes('youtu.be/')) {
@@ -451,6 +501,8 @@ document.getElementById('btn-save-display').addEventListener('click', async () =
   await set(ref(db, 'display'), displayConfig);
   alert('Pengaturan tampilan TV berhasil diperbarui!');
 });
+
+initFirebase();
 </script>
 
 </body>
